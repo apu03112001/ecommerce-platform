@@ -1,4 +1,5 @@
 const express = require("express");
+
 const router = express.Router();
 
 const protect = require("../middleware/authMiddleware");
@@ -13,19 +14,47 @@ const {
   deleteProduct,
 } = require("../controllers/productController");
 
-// Public
+// ================= ROLE CHECK =================
+const sellerAccess = (req, res, next) => {
+  if (
+    req.user &&
+    (
+      req.user.role === "admin" ||
+      req.user.role === "sales_person"
+    )
+  ) {
+    return next();
+  }
+
+  return res.status(403).json({
+    message:
+      "Only Admin and Sales Person can manage products.",
+  });
+};
+
+// ================= PUBLIC =================
+
+// Get all products
 router.get("/", getProducts);
 
-// Sales Person / Admin - own products
-router.get("/my", protect, getMyProducts);
+// Get logged-in user's own products
+// IMPORTANT: this must come before /:id
+router.get(
+  "/my",
+  protect,
+  getMyProducts
+);
 
-// Public single product
+// Get one product
 router.get("/:id", getProductById);
+
+// ================= ADMIN + SALES PERSON =================
 
 // Create product
 router.post(
   "/",
   protect,
+  sellerAccess,
   upload.single("image"),
   createProduct
 );
@@ -34,6 +63,7 @@ router.post(
 router.put(
   "/:id",
   protect,
+  sellerAccess,
   upload.single("image"),
   updateProduct
 );
@@ -42,6 +72,7 @@ router.put(
 router.delete(
   "/:id",
   protect,
+  sellerAccess,
   deleteProduct
 );
 
