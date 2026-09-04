@@ -1,11 +1,16 @@
 const Product = require("../models/Product");
 
-// GET ALL PRODUCTS
+// ================= GET ALL PRODUCTS =================
 const getProducts = async (req, res) => {
   try {
     let filter = {};
 
-    const { category, minPrice, maxPrice, keyword } = req.query;
+    const {
+      category,
+      minPrice,
+      maxPrice,
+      keyword,
+    } = req.query;
 
     if (category) {
       filter.category = category;
@@ -34,15 +39,17 @@ const getProducts = async (req, res) => {
       createdAt: -1,
     });
 
-    res.json(products);
+    res.status(200).json(products);
   } catch (error) {
+    console.error("GET PRODUCTS ERROR:", error);
+
     res.status(500).json({
       message: error.message,
     });
   }
 };
 
-// GET MY PRODUCTS
+// ================= GET MY PRODUCTS =================
 const getMyProducts = async (req, res) => {
   try {
     const products = await Product.find({
@@ -51,34 +58,40 @@ const getMyProducts = async (req, res) => {
       createdAt: -1,
     });
 
-    res.json(products);
+    res.status(200).json(products);
   } catch (error) {
+    console.error("GET MY PRODUCTS ERROR:", error);
+
     res.status(500).json({
       message: error.message,
     });
   }
 };
 
-// GET SINGLE PRODUCT
+// ================= GET SINGLE PRODUCT =================
 const getProductById = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findById(
+      req.params.id
+    );
 
     if (!product) {
       return res.status(404).json({
-        message: "Product not found",
+        message: "Product not found.",
       });
     }
 
-    res.json(product);
+    res.status(200).json(product);
   } catch (error) {
+    console.error("GET PRODUCT ERROR:", error);
+
     res.status(500).json({
       message: error.message,
     });
   }
 };
 
-// CREATE PRODUCT
+// ================= CREATE PRODUCT =================
 const createProduct = async (req, res) => {
   try {
     const product = await Product.create({
@@ -87,7 +100,11 @@ const createProduct = async (req, res) => {
       price: Number(req.body.price),
       category: req.body.category,
       stock: Number(req.body.stock),
+
+      // CloudinaryStorage puts the public Cloudinary URL here
       image: req.file ? req.file.path : "",
+
+      // Logged-in user's ID becomes the product owner
       createdBy: req.user.id,
     });
 
@@ -96,7 +113,7 @@ const createProduct = async (req, res) => {
       product,
     });
   } catch (error) {
-    console.log("CREATE ERROR:", error);
+    console.error("CREATE PRODUCT ERROR:", error);
 
     res.status(500).json({
       message: error.message,
@@ -104,25 +121,32 @@ const createProduct = async (req, res) => {
   }
 };
 
-// UPDATE PRODUCT
+// ================= UPDATE PRODUCT =================
 const updateProduct = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findById(
+      req.params.id
+    );
 
     if (!product) {
       return res.status(404).json({
-        message: "Product not found",
+        message: "Product not found.",
       });
     }
 
-    const isAdmin = req.user.role === "admin";
+    const isAdmin =
+      req.user.role === "admin";
+
     const isOwner =
       product.createdBy &&
-      product.createdBy.toString() === req.user.id.toString();
+      product.createdBy.toString() ===
+        req.user.id.toString();
 
+    // Only Admin or owner can update
     if (!isAdmin && !isOwner) {
       return res.status(403).json({
-        message: "You can only update your own products.",
+        message:
+          "You can only update your own products.",
       });
     }
 
@@ -132,18 +156,20 @@ const updateProduct = async (req, res) => {
     product.category = req.body.category;
     product.stock = Number(req.body.stock);
 
+    // New image comes from Cloudinary
     if (req.file) {
       product.image = req.file.path;
     }
 
-    const updatedProduct = await product.save();
+    const updatedProduct =
+      await product.save();
 
     res.status(200).json({
       message: "Product updated successfully!",
       product: updatedProduct,
     });
   } catch (error) {
-    console.log("UPDATE ERROR:", error);
+    console.error("UPDATE PRODUCT ERROR:", error);
 
     res.status(500).json({
       message: error.message,
@@ -151,35 +177,44 @@ const updateProduct = async (req, res) => {
   }
 };
 
-// DELETE PRODUCT
+// ================= DELETE PRODUCT =================
 const deleteProduct = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findById(
+      req.params.id
+    );
 
     if (!product) {
       return res.status(404).json({
-        message: "Product not found",
+        message: "Product not found.",
       });
     }
 
-    const isAdmin = req.user.role === "admin";
+    const isAdmin =
+      req.user.role === "admin";
+
     const isOwner =
       product.createdBy &&
-      product.createdBy.toString() === req.user.id.toString();
+      product.createdBy.toString() ===
+        req.user.id.toString();
 
+    // Only Admin or owner can delete
     if (!isAdmin && !isOwner) {
       return res.status(403).json({
-        message: "You can only delete your own products.",
+        message:
+          "You can only delete your own products.",
       });
     }
 
-    await Product.findByIdAndDelete(req.params.id);
+    await Product.findByIdAndDelete(
+      req.params.id
+    );
 
     res.status(200).json({
       message: "Product deleted successfully!",
     });
   } catch (error) {
-    console.log("DELETE ERROR:", error);
+    console.error("DELETE PRODUCT ERROR:", error);
 
     res.status(500).json({
       message: error.message,
