@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import API from "../services/api";
 import ProductCard from "../components/ProductCard";
 
 function Home() {
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const categories = [
     "All",
@@ -15,65 +18,101 @@ function Home() {
     "Accessories",
   ];
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
   const fetchProducts = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/products");
-      setProducts(res.data);
-    } catch (err) {
-      console.log(err);
+      setLoading(true);
+      setError("");
+
+      const params = {};
+
+      if (search.trim()) {
+        params.keyword = search.trim();
+      }
+
+      if (category !== "All") {
+        params.category = category;
+      }
+
+      const response = await API.get("/products", {
+        params,
+      });
+
+      setProducts(response.data);
+    } catch (error) {
+      console.error("HOME PRODUCTS ERROR:", error);
+
+      setError(
+        error.response?.data?.message ||
+          "Unable to load products."
+      );
+
+      setProducts([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const filteredProducts = products.filter((product) => {
-    const searchMatch = product.name
-      .toLowerCase()
-      .includes(search.toLowerCase());
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchProducts();
+    }, 300);
 
-    const categoryMatch =
-      category === "All" || product.category === category;
-
-    return searchMatch && categoryMatch;
-  });
+    return () => clearTimeout(timer);
+  }, [search, category]);
 
   return (
-    <div>
-      {/* HERO SECTION */}
-      <div
+    <div style={{ paddingBottom: "50px" }}>
+      {/* ================= HERO ================= */}
+      <section
         style={{
           background:
-            "linear-gradient(135deg,#2563EB,#1E40AF)",
+            "linear-gradient(135deg, #2563eb, #1e40af)",
           color: "white",
-          borderRadius: "24px",
-          padding: "50px",
+          borderRadius: "20px",
+          padding: "55px 40px",
+          marginBottom: "35px",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          flexWrap: "wrap",
           gap: "30px",
-          marginBottom: "35px",
+          flexWrap: "wrap",
         }}
       >
         <div>
-          <h1 style={{ fontSize: "48px", marginBottom: "15px" }}>
+          <h1
+            style={{
+              fontSize: "42px",
+              marginBottom: "15px",
+              fontWeight: "700",
+            }}
+          >
             Mega Sale 50% OFF
           </h1>
 
-          <p style={{ fontSize: "20px", opacity: 0.9 }}>
-            Discover gadgets, fashion, accessories and much more.
+          <p
+            style={{
+              fontSize: "18px",
+              marginBottom: "25px",
+              opacity: "0.95",
+            }}
+          >
+            Discover gadgets, fashion, accessories and
+            much more.
           </p>
 
           <button
+            onClick={() =>
+              window.scrollTo({
+                top: 500,
+                behavior: "smooth",
+              })
+            }
             style={{
-              marginTop: "25px",
               background: "white",
-              color: "#1E40AF",
-              padding: "14px 24px",
-              borderRadius: "10px",
+              color: "#1e40af",
               border: "none",
+              padding: "12px 22px",
+              borderRadius: "8px",
               fontWeight: "600",
             }}
           >
@@ -85,8 +124,9 @@ function Home() {
           style={{
             width: "250px",
             height: "180px",
-            background: "rgba(255,255,255,.15)",
-            borderRadius: "20px",
+            borderRadius: "18px",
+            background:
+              "rgba(255,255,255,0.18)",
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
@@ -95,70 +135,127 @@ function Home() {
         >
           🛍️
         </div>
+      </section>
+
+      {/* ================= SEARCH ================= */}
+      <div
+        style={{
+          marginBottom: "18px",
+        }}
+      >
+        <input
+          type="text"
+          placeholder="Search products..."
+          value={search}
+          onChange={(e) =>
+            setSearch(e.target.value)
+          }
+          style={{
+            width: "100%",
+            padding: "15px 18px",
+            border: "1px solid #cbd5e1",
+            borderRadius: "10px",
+            fontSize: "16px",
+            background: "white",
+          }}
+        />
       </div>
 
-      {/* SEARCH BAR */}
-      <input
-        type="text"
-        placeholder="Search products..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        style={{
-          width: "100%",
-          padding: "16px",
-          borderRadius: "12px",
-          border: "1px solid #CBD5E1",
-          fontSize: "16px",
-          marginBottom: "25px",
-        }}
-      />
-
-      {/* CATEGORY BUTTONS */}
+      {/* ================= CATEGORIES ================= */}
       <div
         style={{
           display: "flex",
           gap: "12px",
           flexWrap: "wrap",
-          marginBottom: "30px",
+          marginBottom: "35px",
         }}
       >
-        {categories.map((item) => (
-          <button
-            key={item}
-            onClick={() => setCategory(item)}
-            style={{
-              padding: "10px 20px",
-              borderRadius: "25px",
-              border: "none",
-              background:
-                category === item ? "#2563EB" : "white",
-              color:
-                category === item ? "white" : "#334155",
-              boxShadow: "0 2px 8px rgba(0,0,0,.08)",
-              fontWeight: "600",
-            }}
-          >
-            {item}
-          </button>
-        ))}
+        {categories.map((item) => {
+          const active =
+            category === item;
+
+          return (
+            <button
+              key={item}
+              onClick={() =>
+                setCategory(item)
+              }
+              style={{
+                border: "none",
+                padding: "10px 20px",
+                borderRadius: "20px",
+                background: active
+                  ? "#2563eb"
+                  : "white",
+                color: active
+                  ? "white"
+                  : "#334155",
+                fontWeight: "600",
+                boxShadow:
+                  "0 4px 12px rgba(15,23,42,0.08)",
+              }}
+            >
+              {item}
+            </button>
+          );
+        })}
       </div>
 
-      {/* PRODUCT GRID */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(auto-fill, minmax(280px,1fr))",
-          gap: "25px",
-        }}
-      >
-        {filteredProducts.map((product) => (
-          <ProductCard
-            key={product._id}
-            product={product}
-          />
-        ))}
-      </div>
+      {/* ================= PRODUCTS ================= */}
+      {loading ? (
+        <div
+          style={{
+            textAlign: "center",
+            padding: "50px",
+          }}
+        >
+          <h2>Loading products...</h2>
+        </div>
+      ) : error ? (
+        <div
+          className="card"
+          style={{
+            padding: "35px",
+            textAlign: "center",
+            color: "#991b1b",
+            background: "#fee2e2",
+          }}
+        >
+          {error}
+        </div>
+      ) : products.length === 0 ? (
+        <div
+          className="card"
+          style={{
+            padding: "50px",
+            textAlign: "center",
+          }}
+        >
+          <h2 style={{ marginBottom: "8px" }}>
+            No products found
+          </h2>
+
+          <p style={{ color: "#64748b" }}>
+            Try another search or category.
+          </p>
+        </div>
+      ) : (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(230px, 1fr))",
+            gap: "25px",
+          }}
+        >
+          {products.map((product) => (
+            <ProductCard
+              key={product._id}
+              product={product}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
