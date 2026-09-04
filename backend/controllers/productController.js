@@ -1,4 +1,26 @@
 const Product = require("../models/Product");
+const cloudinary = require("../config/cloudinary");
+
+// ================= CLOUDINARY UPLOAD HELPER =================
+const uploadToCloudinary = (fileBuffer) => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: "LabuShop",
+        resource_type: "image",
+      },
+      (error, result) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result);
+        }
+      }
+    );
+
+    stream.end(fileBuffer);
+  });
+};
 
 // ================= GET ALL PRODUCTS =================
 const getProducts = async (req, res) => {
@@ -94,17 +116,24 @@ const getProductById = async (req, res) => {
 // ================= CREATE PRODUCT =================
 const createProduct = async (req, res) => {
   try {
+    let imageUrl = "";
+
+    // Upload image directly to Cloudinary
+    if (req.file) {
+      const result = await uploadToCloudinary(
+        req.file.buffer
+      );
+
+      imageUrl = result.secure_url;
+    }
+
     const product = await Product.create({
       name: req.body.name,
       description: req.body.description,
       price: Number(req.body.price),
       category: req.body.category,
       stock: Number(req.body.stock),
-
-      // CloudinaryStorage puts the public Cloudinary URL here
-      image: req.file ? req.file.path : "",
-
-      // Logged-in user's ID becomes the product owner
+      image: imageUrl,
       createdBy: req.user.id,
     });
 
@@ -116,7 +145,9 @@ const createProduct = async (req, res) => {
     console.error("CREATE PRODUCT ERROR:", error);
 
     res.status(500).json({
-      message: error.message,
+      message:
+        error.message ||
+        "Failed to create product.",
     });
   }
 };
@@ -142,7 +173,6 @@ const updateProduct = async (req, res) => {
       product.createdBy.toString() ===
         req.user.id.toString();
 
-    // Only Admin or owner can update
     if (!isAdmin && !isOwner) {
       return res.status(403).json({
         message:
@@ -156,9 +186,13 @@ const updateProduct = async (req, res) => {
     product.category = req.body.category;
     product.stock = Number(req.body.stock);
 
-    // New image comes from Cloudinary
+    // Upload new image directly to Cloudinary
     if (req.file) {
-      product.image = req.file.path;
+      const result = await uploadToCloudinary(
+        req.file.buffer
+      );
+
+      product.image = result.secure_url;
     }
 
     const updatedProduct =
@@ -172,7 +206,9 @@ const updateProduct = async (req, res) => {
     console.error("UPDATE PRODUCT ERROR:", error);
 
     res.status(500).json({
-      message: error.message,
+      message:
+        error.message ||
+        "Failed to update product.",
     });
   }
 };
@@ -198,7 +234,6 @@ const deleteProduct = async (req, res) => {
       product.createdBy.toString() ===
         req.user.id.toString();
 
-    // Only Admin or owner can delete
     if (!isAdmin && !isOwner) {
       return res.status(403).json({
         message:
