@@ -22,37 +22,11 @@ connectDB();
 
 // ================= CORS =================
 
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:5174",
-  "https://ecommerce-platform-ten-tan.vercel.app",
-];
-
+// Allow the frontend hosted on Vercel
+// and local development frontends.
 app.use(
   cors({
-    origin: function (origin, callback) {
-      // Allow requests without an origin
-      // such as Postman or server-to-server requests
-      if (!origin) {
-        return callback(null, true);
-      }
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      // Allow Vercel preview deployments
-      if (
-        origin.includes(".vercel.app")
-      ) {
-        return callback(null, true);
-      }
-
-      return callback(
-        new Error("Not allowed by CORS")
-      );
-    },
-
+    origin: true,
     methods: [
       "GET",
       "POST",
@@ -61,13 +35,10 @@ app.use(
       "PATCH",
       "OPTIONS",
     ],
-
     allowedHeaders: [
       "Content-Type",
       "Authorization",
     ],
-
-    credentials: false,
   })
 );
 
@@ -78,37 +49,27 @@ app.use(express.json());
 // ================= ROUTES =================
 
 app.use("/api/auth", authRoutes);
-
 app.use("/api/products", productRoutes);
-
 app.use("/api/cart", cartRoutes);
-
 app.use("/api/wishlist", wishlistRoutes);
-
 app.use("/api/orders", orderRoutes);
 
 // ================= HOME =================
 
 app.get("/", (req, res) => {
   res.json({
-    message:
-      "LabuShop backend is running successfully!",
+    message: "LabuShop backend is running successfully!",
   });
 });
 
 // ================= PROFILE =================
 
-app.get(
-  "/api/profile",
-  protect,
-  (req, res) => {
-    res.json({
-      message:
-        "Welcome to your profile!",
-      user: req.user,
-    });
-  }
-);
+app.get("/api/profile", protect, (req, res) => {
+  res.json({
+    message: "Welcome to your profile!",
+    user: req.user,
+  });
+});
 
 // ================= SERVER =================
 
